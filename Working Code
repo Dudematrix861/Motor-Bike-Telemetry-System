@@ -1,0 +1,105 @@
+
+#include <SoftwareSerial.h>
+#include <TinyGPS++.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#include <NewPing.h>
+int LED  = 13;
+#include <SoftwareSerial.h>
+#define BTTX 13
+#define BTRX 12
+SoftwareSerial SerialBT(BTTX, BTRX); 
+
+//SoftwareSerial btSerial(12, 13); // RX, TX for Bluetooth HC-05
+SoftwareSerial gpsSerial(8, 9);  // RX, TX for GPS NEO-6M
+
+OneWire oneWire(2);  // Connect DS18B20 data pin to digital pin 1
+DallasTemperature sensors(&oneWire);
+SoftwareSerial ss(12, 13);
+
+
+
+// Ultrasonic sensor 1
+#define TRIGGER_PIN_1 7
+#define ECHO_PIN_1 6
+#define MAX_DISTANCE_1 400
+
+// Ultrasonic sensor 2
+#define TRIGGER_PIN_2 4
+#define ECHO_PIN_2 5
+#define MAX_DISTANCE_2 400
+
+NewPing sonar1(TRIGGER_PIN_1, ECHO_PIN_1, MAX_DISTANCE_1);
+NewPing sonar2(TRIGGER_PIN_2, ECHO_PIN_2, MAX_DISTANCE_2);
+
+void setup() {
+  SerialBT.begin(57600);                                
+SerialBT.println("Bluetooth connection established"); 
+  //Serial.begin(9600);   // Serial monitor for debugging
+  //btSerial.begin(9600);  // Bluetooth module communication
+  
+  sensors.begin();       // Initialize DS18B20 temperature sensor
+  pinMode(TRIGGER_PIN_1, OUTPUT);
+  pinMode(ECHO_PIN_1, INPUT);
+  pinMode(TRIGGER_PIN_2, OUTPUT);
+  pinMode(ECHO_PIN_2, INPUT);
+  
+  ss.begin(9600);
+}
+
+void loop() {
+  delay(300);
+if (SerialBT.available())
+  {
+  String msg = SerialBT.readString();
+  if(msg == "on\r\n")
+    {
+    digitalWrite(13, HIGH);
+    SerialBT.println("LED is ON");
+    }
+    else
+    if(msg == "off\r\n")
+    {
+    digitalWrite(13, LOW);
+    SerialBT.println("LED is OFF");
+    }
+  }
+  // Read temperature from DS18B20
+  sensors.requestTemperatures();
+  float temperatureC = sensors.getTempCByIndex(0);
+
+  // Read distance from Ultrasonic sensor 1
+  unsigned long duration1 = sonar1.ping();
+  unsigned int distance1 = sonar1.convert_cm(duration1);
+
+  // Read distance from Ultrasonic sensor 2
+  unsigned long duration2 = sonar2.ping();
+  unsigned int distance2 = sonar2.convert_cm(duration2);
+
+  
+  while (ss.available() > 0){
+    // get the byte data from the GPS
+    byte gpsData = ss.read();
+    Serial.write(gpsData);
+  }
+
+ /* // Send data to Bluetooth module
+  btSerial.print("Engine Temperature: ");
+  btSerial.print(temperatureC);
+  btSerial.print("C, Front Suspension : ");
+  btSerial.print(distance1);
+  btSerial.print("cm, Back Suspension : ");
+  btSerial.print(distance2);
+  btSerial.println("cm");
+*/
+  // Print data to Serial Monitor for debugging
+  Serial.print("Engine Temperature: ");
+  Serial.print(temperatureC);
+  Serial.print("C, Front Suspension : ");
+  Serial.print(distance1);
+  Serial.print("cm,Back Suspension  :  ");
+  Serial.print(distance2);
+  Serial.println("cm");
+
+  delay(1000); // Adjust the delay according to your requirements
+}
